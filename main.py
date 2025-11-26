@@ -15,6 +15,16 @@ import asyncio
 
 app = FastAPI()
 
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],            # Allow all origins or add your React domain
+    allow_credentials=True,
+    allow_methods=["*"],            # IMPORTANT — allows OPTIONS, POST, GET, etc.
+    allow_headers=["*"],            # IMPORTANT — allows Content-Type, Authorization
+)
+
 Base.metadata.create_all(bind=engine)
 
 def get_db():
@@ -289,3 +299,7 @@ async def forward_topic(topic: str):
         except httpx.RequestError as e:
             raise HTTPException(status_code=500, detail=f"Request failed: {str(e)}")
 
+@app.post("/test/")
+def test_endpoint(data: dict):
+    print("Received data:", data)
+    return {"message": "Data received successfully", "data": data}
