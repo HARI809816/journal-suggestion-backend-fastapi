@@ -285,11 +285,25 @@ async def forward_topic(topic: str):
     async with AsyncClient() as client:
         try:
             # Replace with your actual target service URL
-            response = await client.post(
-                "http://other-fastapi-service.com/api/topic",  # Replace with actual URL
-                json={"topic": topic},
-                headers={"Content-Type": "application/json"}
-            )
+            # response = await client.post(
+            #     "http://100.28.122.107:8000/recommend",  # Replace with actual URL
+            #     json={"title": topic,"top_k": 10},
+            #     headers={"Content-Type": "application/json"}
+            # )
+
+            
+            url = "http://100.28.122.107:8000/recommend"
+
+            payload = {
+                "title": "Smart Computing",
+                "top_k": 10
+            }
+
+            response = requests.post(url, json=payload)
+
+            print("Status Code:", response.status_code)
+            print("Response:")
+
             
             if response.status_code == 200:
                 return {"message": "Topic forwarded successfully", "data": response.json()}
