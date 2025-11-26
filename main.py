@@ -278,7 +278,7 @@ def get_recommendations(
 
 @app.post("/forward-topic/")
 async def forward_topic(data: TopicInput):
-    topic = data.topic
+    topic = data.title
     print(f"Received topic from frontend: {topic}")
 
     target_url = "http://100.28.122.107:8000/recommend"  # Replace with actual target API URL
