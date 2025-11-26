@@ -251,38 +251,41 @@ def search_journals(
     return results
 
 
-@app.post("/journals/recommendations")
-def get_recommendations(
-    recommendations: List[RecommendationInput],
-    db: Session = Depends(get_db)
-):
+
+
+
+def get_recommendations(recommendations: List[dict], db: Session):
+
     results = []
+
     for rec in recommendations:
-        # Match by Journal_Name and Special_Issue_Name
-        # Using ilike for case-insensitive matching to be safer
+
+        journal_name = rec.get("Journal_Name")
+        special_issue = rec.get("Special_Issue_Name")
+        score = rec.get("Similarity_Score")
+
         db_obj = db.query(JournalData).filter(
-            JournalData.Journal_Name.ilike(rec.Journal_Name),
-            JournalData.Special_Issue_Name.ilike(rec.Special_Issue_Name)
+            JournalData.Journal_Name.ilike(f"%{journal_name}%"),
+            JournalData.Special_Issue_Name.ilike(f"%{special_issue}%")
         ).first()
-        
+
         if db_obj:
-            # Convert SQLAlchemy object to dictionary
-            obj_dict = {c.name: getattr(db_obj, c.name) for c in JournalData.__table__.columns}
-            
-            # Add the similarity score from the input
-            obj_dict['Similarity_Score'] = rec.Similarity_Score
-            
+            obj_dict = {
+                c.name: getattr(db_obj, c.name)
+                for c in JournalData.__table__.columns
+            }
+            obj_dict["Similarity_Score"] = score
             results.append(obj_dict)
-            
+
     return results
 
+
 @app.post("/forward-topic/")
-async def forward_topic(data: TopicInput):
+async def forward_topic(data: TopicInput, db: Session = Depends(get_db)):
     topic = data.title
     print(f"Received topic from frontend: {topic}")
 
-    target_url = "http://100.28.122.107:8000/recommend"  # Replace with actual target API URL
-
+    target_url = "http://100.28.122.107:8000/recommend"  
     async with AsyncClient() as client:
         try:
             response = await client.post(
@@ -293,9 +296,14 @@ async def forward_topic(data: TopicInput):
             response.raise_for_status()
 
             print("Forwarded successfully, response:", response.json())
+
+            recommendation = response.json()
+            ans = get_recommendations(recommendation,db)
+            
+
             return {
                 "message": "Topic forwarded successfully",
-                "data": response.json()
+                "data": ans
             }
 
         except httpx.RequestError as e:
