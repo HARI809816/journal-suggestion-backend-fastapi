@@ -295,14 +295,14 @@ async def forward_topic(topic: str):
             url = "http://100.28.122.107:8000/recommend"
 
             payload = {
-                "title": "Smart Computing",
+                "title": topic,
                 "top_k": 10
             }
 
             response = requests.post(url, json=payload)
 
             print("Status Code:", response.status_code)
-            print("Response:")
+            print("Response:", response.json())
 
             
             if response.status_code == 200:
