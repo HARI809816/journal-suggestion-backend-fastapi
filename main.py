@@ -182,6 +182,16 @@ def get_journals_dataframe(db: Session = Depends(get_db)):
     # Return the DataFrame as JSON (easiest for your model)
     return df.to_dict(orient='records')
 
+@app.get("/assosiate/dataframe")
+def get_assosiate_dataframe(db: Session = Depends(get_db)):
+    # Get the data using pandas
+    df = pd.read_sql_query("""
+        SELECT _id, "Journal_Name", "Special_Issue_keywords",  
+        FROM Assosiate_data
+    """, db.bind)
+    
+    # Return the DataFrame as JSON (easiest for your model)
+    return df.to_dict(orient='records')
 
 
 
@@ -192,13 +202,14 @@ async def update_from_excel(
     db: Session = Depends(get_db)
 ):
 
-    # 1️⃣ Save uploaded excel temporarily
-    temp_path = "temp_update.xlsx"
-    with open(temp_path, "wb") as f:
-        f.write(await file.read())
+    # # 1️⃣ Save uploaded excel temporarily
+    # temp_path = "temp_update.xlsx"
+    # with open(temp_path, "wb") as f:
+    #     f.write(await file.read())
 
+    df = pd.read_excel(file.file, engine="openpyxl", dtype=object, keep_default_na=False, na_values=[])
     # 2️⃣ Read excel
-    df = pd.read_excel(temp_path, dtype=str)
+    # df = pd.read_excel(temp_path, dtype=str)
 
     df = clean_dataframe(df)
     
@@ -218,6 +229,45 @@ async def update_from_excel(
         else:
             # -------- INSERT NEW ROW ----------
             new_row = JournalData(**rec)
+            db.add(new_row)
+
+    db.commit()
+
+    return {"message": "Database updated successfully"}
+
+
+@app.post("/update_from_excel")
+async def update_from_excel(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+
+    # # 1️⃣ Save uploaded excel temporarily
+    # temp_path = "temp_update.xlsx"
+    # with open(temp_path, "wb") as f:
+    #     f.write(await file.read())
+
+    # 2️⃣ Read excel
+    df = pd.read_excel(file.file, engine="openpyxl", dtype=object, keep_default_na=False, na_values=[])
+
+    df = clean_dataframe(df)
+    
+    records = df.to_dict(orient="records")
+
+    # 3️⃣ Loop all rows
+    for rec in records:
+
+        _id = rec.get("_id")   # primary key
+
+        db_obj = db.query(AssosiateData).filter(AssosiateData._id == _id).first()
+
+        if db_obj:
+            # -------- UPDATE ----------
+            for key, value in rec.items():
+                setattr(db_obj, key, value)
+        else:
+            # -------- INSERT NEW ROW ----------
+            new_row = AssosiateData(**rec)
             db.add(new_row)
 
     db.commit()
@@ -295,7 +345,7 @@ async def forward_topic(data: TopicInput, db: Session = Depends(get_db)):
             )
             response.raise_for_status()
 
-            print("Forwarded successfully, response:", response.json())
+            #print("Forwarded successfully, response:", response.json())
 
             recommendation = response.json()
             ans = get_recommendations(recommendation,db)
