@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from db import SessionLocal, engine, Base
 from models import *
 import numpy as np
-from schemas import JournalColumnsResponse, RecommendationInput
+from schemas import JournalColumnsResponse, RecommendationInput, TopicInput
 from sqlalchemy import text
 import requests
 from httpx import AsyncClient
@@ -277,41 +277,31 @@ def get_recommendations(
     return results
 
 @app.post("/forward-topic/")
-async def forward_topic(topic: str):
-    # Receive topic from React frontend
+async def forward_topic(data: TopicInput):
+    topic = data.topic
     print(f"Received topic from frontend: {topic}")
-    
-    # Forward the topic to another FastAPI service
+
+    target_url = "http://100.28.122.107:8000/recommend"  # Replace with actual target API URL
+
     async with AsyncClient() as client:
         try:
-            # Replace with your actual target service URL
-            # response = await client.post(
-            #     "http://100.28.122.107:8000/recommend",  # Replace with actual URL
-            #     json={"title": topic,"top_k": 10},
-            #     headers={"Content-Type": "application/json"}
-            # )
+            response = await client.post(
+                target_url,
+                json={"title": topic, "top_k": 10},
+                headers={"Content-Type": "application/json"}
+            )
+            response.raise_for_status()
 
-            
-            url = "http://100.28.122.107:8000/recommend"
-
-            payload = {
-                "title": topic,
-                "top_k": 10
+            print("Forwarded successfully, response:", response.json())
+            return {
+                "message": "Topic forwarded successfully",
+                "data": response.json()
             }
 
-            response = requests.post(url, json=payload)
-
-            print("Status Code:", response.status_code)
-            print("Response:", response.json())
-
-            
-            if response.status_code == 200:
-                return {"message": "Topic forwarded successfully", "data": response.json()}
-            else:
-                raise HTTPException(status_code=response.status_code, detail="Error from target service")
-                
         except httpx.RequestError as e:
             raise HTTPException(status_code=500, detail=f"Request failed: {str(e)}")
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(status_code=e.response.status_code, detail="Error from target service")
 
 @app.post("/test/")
 def test_endpoint(data: dict):

@@ -27,3 +27,6 @@ class RecommendationInput(BaseModel):
     Similarity_Score: float
     Qdrant_id: Optional[str] = None
     Special_Issue_keywords: Optional[str] = None
+
+class TopicInput(BaseModel):
+    title: str
