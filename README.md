@@ -136,8 +136,6 @@ Ensures smooth insertion **without DB failures**.
 ]
 }
 
-yaml
-Copy code
 
 ---
 
@@ -148,4 +146,5 @@ Feel free to open issues or PRs — improvements are welcome!
 
 ## ⭐ Show Support
 If you like this project, don’t forget to **star the repository**!
+
 
