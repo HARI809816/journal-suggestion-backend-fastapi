@@ -1,57 +1,151 @@
-## 🔁 Forwarding Topics to a Chroma-Based RAG Service (No ML Model)
+# 📘 FastAPI Journal Management & Recommendation Backend
 
-This backend **does not run any machine learning model**.
-
-Instead, it forwards the topic to another **FastAPI microservice** that uses:
-
-- 🧠 Embeddings (OpenAI / Sentence Transformers / any model)
-- 🗂️ **ChromaDB** as the vector database
-- 🔍 Top-K semantic similarity search
-
-The microservice returns the most relevant journal topics using vector similarity.
+A powerful FastAPI-based backend for managing journal data, uploading Excel files, performing search, and generating recommendations using a **ChromaDB-based RAG (Retrieval-Augmented Generation) service**.
 
 ---
 
-## ⚙️ How the System Works
+## 🚀 Features
 
-### **1️⃣ React Frontend → Main FastAPI Backend**
-User enters a topic, which is received through:
+### 📤 Excel Upload (Bulk Insert)
+Upload `.xlsx` files for:
+- Journal data  
+- Associate data  
+- Clean handling of NaN, NaT, Excel error values  
+- Efficient bulk insert into PostgreSQL  
 
+---
 
+### 🔄 Excel-Based Update
+Update existing rows in PostgreSQL using Excel:
+- Detects existing `_id`
+- Updates if exists  
+- Inserts new row if missing  
+- Works for both **JournalData** and **AssosiateData**
+
+---
+
+## 🔁 Recommendation Logic — How It Works
+
+### ✔️ RAG Service Responsibilities  
+The external ChromaDB RAG service returns:
+- Vector-based matched journal suggestions  
+- With similarity scores  
+
+---
+
+### ✔️ Backend Responsibilities  
+Your FastAPI backend handles:
+
+- 🔄 Forwarding topic to the RAG microservice  
+- 🗃️ Searching PostgreSQL for matching journals  
+- 🔗 Merging RAG similarity scores with SQL journal metadata  
+- 📤 Returning the final enriched result to the frontend  
+
+This separation keeps the backend **modular, lightweight, and scalable**.
+
+---
+
+## 📌 Key Endpoints
+
+### 📤 Upload Excel Files
+POST /uploadfile-Journal/
+POST /upload-Assosiate/
+
+shell
+Copy code
+
+### 🔄 Update Records from Excel
+POST /update_from_excel
+
+shell
+Copy code
+
+### 🔎 Search Journals
+GET /journals/search
+
+shell
+Copy code
+
+### 🧾 DataFrame-Style Fetching
+GET /journals/dataframe
+GET /assosiate/dataframe
+
+shell
+Copy code
+
+### 📡 Forward Topic to RAG Service
 POST /forward-topic/
+
+yaml
+Copy code
+
 ---
 
-### **2️⃣ Main FastAPI → RAG/Chroma Service**
-Your backend forwards the topic to another FastAPI RAG service:
+## 🧠 Tech Stack
 
-python
-async with AsyncClient() as client:
-    response = await client.post(
-        RAG_SERVICE_URL,
-        json={"query": topic, "top_k": top_k}
-    )
+- **FastAPI**  
+- **PostgreSQL (AWS RDS)**  
+- **SQLAlchemy ORM**  
+- **Pandas for Excel Handling**  
+- **ChromaDB (Vector Search)**  
+- **Async HTTP (httpx)**  
+- **CORS-enabled for React frontend**  
+- **Deployed on AWS EC2**  
 
-3️⃣ RAG Service (ChromaDB) Processing
+---
 
-  1. The RAG microservice performs:
+## 🏗️ Architecture Overview
 
-  2. Embedding generation for the query
+React Frontend
+↓
+FastAPI Backend (This Project)
+↓
+ChromaDB RAG Service (Vector Search FastAPI App)
+↓
+PostgreSQL (Metadata Enrichment)
 
-  3. Vector search using ChromaDB
+yaml
+Copy code
 
-  4. Retrieves top-K similar results
+---
 
-Returns:
+## ⚙️ Cleaning Logic (Auto Fixing Excel Issues)
 
-  - journal names
+The backend automatically cleans:
+- NaN → `None`
+- NaT → `None`
+- Excel errors (#REF!, #DIV/0!, #N/A, etc.)
+- Blank spaces, “-”, “None”, “null”, etc.
 
-  - similarity scores
+Ensures smooth insertion **without DB failures**.
 
-  - metadata from the Chroma collection
+---
 
-Example ChromaDB search:
+## 📬 Final Output Format (Recommendation API)
 
-results = collection.query(
-    query_texts=[query],
-    n_results=top_k
-)
+{
+"message": "Topic forwarded successfully",
+"data": [
+{
+"_id": "...",
+"Journal_Name": "...",
+"Special_Issue_Name": "...",
+"Similarity_Score": 0.82,
+...
+}
+]
+}
+
+yaml
+Copy code
+
+---
+
+## 🤝 Contributions
+Feel free to open issues or PRs — improvements are welcome!
+
+---
+
+## ⭐ Show Support
+If you like this project, don’t forget to **star the repository**!
+
