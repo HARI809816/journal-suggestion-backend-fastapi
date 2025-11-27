@@ -51,33 +51,27 @@ This separation keeps the backend **modular, lightweight, and scalable**.
 POST /uploadfile-Journal/
 POST /upload-Assosiate/
 
-shell
-Copy code
 
 ### 🔄 Update Records from Excel
 POST /update_from_excel
 
-shell
-Copy code
+
 
 ### 🔎 Search Journals
 GET /journals/search
 
-shell
-Copy code
+
 
 ### 🧾 DataFrame-Style Fetching
 GET /journals/dataframe
 GET /assosiate/dataframe
 
-shell
-Copy code
+
 
 ### 📡 Forward Topic to RAG Service
 POST /forward-topic/
 
-yaml
-Copy code
+
 
 ---
 
@@ -104,8 +98,7 @@ ChromaDB RAG Service (Vector Search FastAPI App)
 ↓
 PostgreSQL (Metadata Enrichment)
 
-yaml
-Copy code
+
 
 ---
 
@@ -146,5 +139,6 @@ Feel free to open issues or PRs — improvements are welcome!
 
 ## ⭐ Show Support
 If you like this project, don’t forget to **star the repository**!
+
 
 
