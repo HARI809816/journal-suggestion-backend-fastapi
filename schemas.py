@@ -30,3 +30,4 @@ class RecommendationInput(BaseModel):
 
 class TopicInput(BaseModel):
     title: str
+    top_k: int 

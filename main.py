@@ -333,6 +333,7 @@ def get_recommendations(recommendations: List[dict], db: Session):
 @app.post("/forward-topic/")
 async def forward_topic(data: TopicInput, db: Session = Depends(get_db)):
     topic = data.title
+    top_k = data.top_k
     print(f"Received topic from frontend: {topic}")
 
     target_url = "http://100.28.122.107:8000/recommend"  
@@ -340,7 +341,7 @@ async def forward_topic(data: TopicInput, db: Session = Depends(get_db)):
         try:
             response = await client.post(
                 target_url,
-                json={"title": topic, "top_k": 10},
+                json={"title": topic, "top_k": top_k },
                 headers={"Content-Type": "application/json"}
             )
             response.raise_for_status()
