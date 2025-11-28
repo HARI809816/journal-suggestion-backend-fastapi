@@ -186,7 +186,7 @@ def get_journals_dataframe(db: Session = Depends(get_db)):
 def get_assosiate_dataframe(db: Session = Depends(get_db)):
     # Get the data using pandas
     df = pd.read_sql_query("""
-        SELECT _id, "Journal_Name", "Special_Issue_keywords",  
+        SELECT _id, "Journal_Name", "Special_Issue_keywords"  
         FROM Assosiate_data
     """, db.bind)
     
