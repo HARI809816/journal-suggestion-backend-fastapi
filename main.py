@@ -69,12 +69,9 @@ def clean_dataframe(df):
 
 @app.post("/uploadfile-Journal/")
 async def create_upload_file(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    # Read the uploaded file directly
-    #print("helooooooooooo")
     
     # Read with object dtype to avoid initial type conversion issues
     df = pd.read_excel(file.file, engine="openpyxl", dtype=object, keep_default_na=False, na_values=[])
-    #print("helooooooooooo")
     
     # Clean the dataframe
     df = clean_dataframe(df)
@@ -94,6 +91,7 @@ async def create_upload_file(file: UploadFile = File(...), db: Session = Depends
     # Bulk insert
     db.bulk_insert_mappings(JournalData, records)
     db.commit()
+    forward_journals(db)
 
     return {
         "message": f"Successfully inserted {len(records)} records"
@@ -123,6 +121,8 @@ async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db
     # Bulk insert
     db.bulk_insert_mappings(AssosiateData, records)
     db.commit()
+    get_assosiate_dataframe(db)
+    
 
     return {
         "message": f"Successfully inserted {len(records)} records"
@@ -171,27 +171,65 @@ async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db
     
 #     return response
 
-@app.get("/journals/dataframe")
-def get_journals_dataframe(db: Session = Depends(get_db)):
-    # Get the data using pandas
+# @app.get("/journals/dataframe")
+# def get_journals_dataframe(db: Session = Depends(get_db)):
+#     # Get the data using pandas
+#     df = pd.read_sql_query("""
+#         SELECT _id, "Journal_Name", "Special_Issue_Name", "Special_Issue_keywords" 
+#         FROM journal_data
+#     """, db.bind)
+    
+#     # Return the DataFrame as JSON (easiest for your model)
+#     return {"data":df.to_dict(orient='records')}
+
+
+def forward_journals(db: Session = Depends(get_db)):
+
+    #  Read DF from DB
     df = pd.read_sql_query("""
         SELECT _id, "Journal_Name", "Special_Issue_Name", "Special_Issue_keywords" 
         FROM journal_data
     """, db.bind)
-    
-    # Return the DataFrame as JSON (easiest for your model)
-    return df.to_dict(orient='records')
 
-@app.get("/assosiate/dataframe")
+    payload = {"data": df.to_dict(orient="records")}
+
+    #  Send DF to external API
+    res = requests.post(
+        "http://98.92.100.71/ingest/journals_json",
+        json=payload,
+        timeout=20
+    )
+
+    return {
+        "status": res.status_code,
+        "response": res.json()
+    }
+
+
+
 def get_assosiate_dataframe(db: Session = Depends(get_db)):
-    # Get the data using pandas
-    df = pd.read_sql_query("""
-        SELECT _id, "Journal_Name", "Special_Issue_keywords"  
-        FROM Assosiate_data
-    """, db.bind)
-    
-    # Return the DataFrame as JSON (easiest for your model)
-    return df.to_dict(orient='records')
+    query = """
+        SELECT 
+            _id,
+            "Journal_Name",
+            "Special_Issue_keywords"
+        FROM "Assosiate_data"
+    """
+
+    df = pd.read_sql_query(query, db.bind)
+
+    payload = {"data": df.to_dict(orient="records")}
+
+    res = requests.post(
+        "http://98.92.100.71/ingest/editors_json",
+        json=payload,
+        timeout=20
+    )
+
+    return {
+        "status": res.status_code,
+        "response": res.json()
+    }
 
 
 
@@ -330,14 +368,80 @@ def get_recommendations(recommendations: List[dict], db: Session):
     return results
 
 
-@app.post("/forward-topic/")
+def get_recommendations_Assosiate(recommendations: List[dict], db: Session):
+
+    results = []
+
+    for rec in recommendations:
+
+        journal_name = rec.get("Journal_Name")
+        special_issue = rec.get("Special_Issue_keywords")
+        score = rec.get("Similarity_Score")
+
+        db_obj = db.query(AssosiateData).filter(
+            AssosiateData.Journal_Name.ilike(f"%{journal_name}%"),
+            AssosiateData.Special_Issue_keywords.ilike(f"%{special_issue}%")
+        ).first()
+
+        if db_obj:
+            obj_dict = {
+                c.name: getattr(db_obj, c.name)
+                for c in AssosiateData.__table__.columns
+            }
+            obj_dict["Similarity_Score"] = score
+            results.append(obj_dict)
+
+    return results
+
+@app.post("/test/assosiate", response_model=None)
+def test_assosiate_api(payload: List[dict], db: Session = Depends(get_db)):
+    return get_recommendations_Assosiate(payload, db)
+
+
+
+@app.post("/forward-topic/Assosiate")
+async def forward_topic_assosiate(data: TopicInput, db: Session = Depends(get_db)):
+    topic = data.title
+    top_k = data.top_k
+    print(f"Received topic from frontend: {topic}")
+    print(f"Top K: {top_k}")
+
+    target_url = "http://98.92.100.71/recommend_editors"
+    async with AsyncClient() as client:
+        try:
+            response = await client.post(
+                target_url,
+                json={"title": topic, "top_k": top_k },
+                headers={"Content-Type": "application/json"}
+            )
+            response.raise_for_status()
+
+            #print("Forwarded successfully, response:", response.json())
+
+            recommendation = response.json()
+            ans = get_recommendations_Assosiate(recommendation,db)
+            
+
+            return {
+                "message": "Topic forwarded successfully",
+                "data": ans
+            }
+
+        except httpx.RequestError as e:
+            raise HTTPException(status_code=500, detail=f"Request failed: {str(e)}")
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(status_code=e.response.status_code, detail="Error from target service")
+
+
+
+@app.post("/forward-topic/jornal")
 async def forward_topic(data: TopicInput, db: Session = Depends(get_db)):
     topic = data.title
     top_k = data.top_k
     print(f"Received topic from frontend: {topic}")
     print(f"Top K: {top_k}")
 
-    target_url = "http://100.28.122.107:8000/recommend"  
+    target_url = "http://98.92.100.71/recommend"  
     async with AsyncClient() as client:
         try:
             response = await client.post(
@@ -362,6 +466,8 @@ async def forward_topic(data: TopicInput, db: Session = Depends(get_db)):
             raise HTTPException(status_code=500, detail=f"Request failed: {str(e)}")
         except httpx.HTTPStatusError as e:
             raise HTTPException(status_code=e.response.status_code, detail="Error from target service")
+
+
 
 @app.post("/test/")
 def test_endpoint(data: dict):
