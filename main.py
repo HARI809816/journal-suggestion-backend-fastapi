@@ -335,6 +335,7 @@ async def forward_topic(data: TopicInput, db: Session = Depends(get_db)):
     topic = data.title
     top_k = data.top_k
     print(f"Received topic from frontend: {topic}")
+    print(f"Top K: {top_k}")
 
     target_url = "http://100.28.122.107:8000/recommend"  
     async with AsyncClient() as client:
