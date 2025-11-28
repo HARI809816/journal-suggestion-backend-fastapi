@@ -71,16 +71,39 @@ def clean_dataframe(df):
 async def create_upload_file(file: UploadFile = File(...), db: Session = Depends(get_db)):
     
     # Read with object dtype to avoid initial type conversion issues
-    df = pd.read_excel(file.file, engine="openpyxl", dtype=object, keep_default_na=False, na_values=[])
+     filename = file.filename.lower()
+
+    # Decide handler based on extension
+     if filename.endswith(".csv"):
+        df = pd.read_csv(
+            file.file,
+            dtype=object,
+            keep_default_na=False
+        )
+
+     elif filename.endswith(".xlsx") or filename.endswith(".xls"):
+        df = pd.read_excel(
+            file.file,
+            engine="openpyxl",
+            dtype=object,
+            keep_default_na=False,
+            na_values=[]
+        )
+
+     else:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported file type. Please upload CSV or Excel."
+        )
     
     # Clean the dataframe
-    df = clean_dataframe(df)
+     df = clean_dataframe(df)
     
     # Convert DataFrame to list of dictionaries
-    records = df.to_dict(orient="records")
+     records = df.to_dict(orient="records")
     
     # Final check to ensure no problematic values remain in records
-    for record in records:
+     for record in records:
         for key, value in record.items():
             if (pd.isna(value) or 
                 (hasattr(value, '__class__') and value.__class__.__name__ in ['NaType', 'NaTType']) or
@@ -89,11 +112,11 @@ async def create_upload_file(file: UploadFile = File(...), db: Session = Depends
                 record[key] = None  # This becomes NULL in SQL
 
     # Bulk insert
-    db.bulk_insert_mappings(JournalData, records)
-    db.commit()
-    forward_journals(db)
+     db.bulk_insert_mappings(JournalData, records)
+     db.commit()
+     forward_journals(db)
 
-    return {
+     return {
         "message": f"Successfully inserted {len(records)} records"
     }
 
@@ -101,16 +124,39 @@ async def create_upload_file(file: UploadFile = File(...), db: Session = Depends
 async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db)):
     
     # Read with object dtype to avoid initial type conversion issues
-    df = pd.read_excel(file.file, engine="openpyxl", dtype=object, keep_default_na=False, na_values=[])
+
+     filename = file.filename.lower()
+     if filename.endswith(".csv"):
+        df = pd.read_csv(
+            file.file,
+            dtype=object,
+            keep_default_na=False
+        )
+
+     elif filename.endswith(".xlsx") or filename.endswith(".xls"):
+        df = pd.read_excel(
+            file.file,
+            engine="openpyxl",
+            dtype=object,
+            keep_default_na=False,
+            na_values=[]
+        )
+
+     else:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported file type. Please upload CSV or Excel."
+        )
+    
     
     # Clean the dataframe
-    df = clean_dataframe(df)
+     df = clean_dataframe(df)
     
     # Convert DataFrame to list of dictionaries
-    records = df.to_dict(orient="records")
+     records = df.to_dict(orient="records")
     
     # Final check to ensure no problematic values remain in records
-    for record in records:
+     for record in records:
         for key, value in record.items():
             if (pd.isna(value) or 
                 (hasattr(value, '__class__') and value.__class__.__name__ in ['NaType', 'NaTType']) or
@@ -119,12 +165,12 @@ async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db
                 record[key] = None  # This becomes NULL in SQL
 
     # Bulk insert
-    db.bulk_insert_mappings(AssosiateData, records)
-    db.commit()
-    get_assosiate_dataframe(db)
+     db.bulk_insert_mappings(AssosiateData, records)
+     db.commit()
+     get_assosiate_dataframe(db)
     
 
-    return {
+     return {
         "message": f"Successfully inserted {len(records)} records"
     }
 
