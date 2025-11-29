@@ -68,20 +68,23 @@ def clean_dataframe(df):
     return df
 
 @app.post("/uploadfile-Journal/")
-async def create_upload_file(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    
-    # Read with object dtype to avoid initial type conversion issues
-     filename = file.filename.lower()
+async def create_upload_file(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
 
-    # Decide handler based on extension
-     if filename.endswith(".csv"):
+    # Get filename
+    filename = file.filename.lower()
+
+    # Choose reader
+    if filename.endswith(".csv"):
         df = pd.read_csv(
             file.file,
             dtype=object,
             keep_default_na=False
         )
 
-     elif filename.endswith(".xlsx") or filename.endswith(".xls"):
+    elif filename.endswith(".xlsx") or filename.endswith(".xls"):
         df = pd.read_excel(
             file.file,
             engine="openpyxl",
@@ -90,35 +93,46 @@ async def create_upload_file(file: UploadFile = File(...), db: Session = Depends
             na_values=[]
         )
 
-     else:
+    else:
         raise HTTPException(
             status_code=400,
             detail="Unsupported file type. Please upload CSV or Excel."
         )
-    
-    # Clean the dataframe
-     df = clean_dataframe(df)
-    
-    # Convert DataFrame to list of dictionaries
-     records = df.to_dict(orient="records")
-    
-    # Final check to ensure no problematic values remain in records
-     for record in records:
+
+    # Clean dataframe
+    df = clean_dataframe(df)
+
+    # Convert to records
+    records = df.to_dict(orient="records")
+
+    # Remove weird NaN/NaT values
+    for record in records:
         for key, value in record.items():
-            if (pd.isna(value) or 
-                (hasattr(value, '__class__') and value.__class__.__name__ in ['NaType', 'NaTType']) or
-                str(value) == 'NaT' or str(value) == 'nan' or str(value) == 'NaN' or
-                (isinstance(value, float) and np.isnan(value))):
-                record[key] = None  # This becomes NULL in SQL
+            if (
+                pd.isna(value)
+                or (hasattr(value, '__class__') and value.__class__.__name__ in ['NaType', 'NaTType'])
+                or str(value) in ['NaT', 'nan', 'NaN']
+                or (isinstance(value, float) and np.isnan(value))
+            ):
+                record[key] = None
 
-    # Bulk insert
-     db.bulk_insert_mappings(JournalData, records)
-     db.commit()
-     forward_journals(db)
+    # 🔥 NEW PART — Clear old data if exists
+    existing_count = db.query(JournalData).count()
 
-     return {
-        "message": f"Successfully inserted {len(records)} records"
+    if existing_count > 0:
+        db.query(JournalData).delete()
+        db.commit()
+
+    # Insert fresh data
+    db.bulk_insert_mappings(JournalData, records)
+    db.commit()
+
+    forward_journals(db)
+
+    return {
+        "message": f"Old {existing_count} records deleted. New {len(records)} records inserted."
     }
+
 
 @app.post("/upload-Assosiate/")
 async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -163,6 +177,13 @@ async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db
                 str(value) == 'NaT' or str(value) == 'nan' or str(value) == 'NaN' or
                 (isinstance(value, float) and np.isnan(value))):
                 record[key] = None  # This becomes NULL in SQL
+    
+     # 🔥 NEW PART — Clear old data if exists
+     existing_count = db.query(AssosiateData).count()
+
+     if existing_count > 0:
+        db.query(AssosiateData).delete()
+        db.commit()
 
     # Bulk insert
      db.bulk_insert_mappings(AssosiateData, records)
@@ -243,7 +264,7 @@ def forward_journals(db: Session = Depends(get_db)):
     res = requests.post(
         "http://98.92.100.71/ingest/journals_json",
         json=payload,
-        timeout=20
+        timeout=240
     )
 
     return {
@@ -269,7 +290,7 @@ def get_assosiate_dataframe(db: Session = Depends(get_db)):
     res = requests.post(
         "http://98.92.100.71/ingest/editors_json",
         json=payload,
-        timeout=20
+        timeout=240
     )
 
     return {
@@ -316,6 +337,7 @@ async def update_from_excel(
             db.add(new_row)
 
     db.commit()
+
 
     return {"message": "Database updated successfully"}
 
