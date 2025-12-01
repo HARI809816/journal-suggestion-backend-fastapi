@@ -342,7 +342,7 @@ async def update_from_excel(
     return {"message": "Database updated successfully"}
 
 
-@app.post("/update_from_excel")
+#@app.post("/update_from_excel")
 async def update_from_excel(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
@@ -381,7 +381,7 @@ async def update_from_excel(
     return {"message": "Database updated successfully"}
 
 
-@app.get("/journals/search")
+#@app.get("/journals/search")
 def search_journals(
     query: Optional[str] = Query(None, description="Search by Journal Name or Keywords"),
     publisher: Optional[str] = Query(None, description="Filter by Publisher"),
@@ -461,7 +461,7 @@ def get_recommendations_Assosiate(recommendations: List[dict], db: Session):
 
     return results
 
-@app.post("/test/assosiate", response_model=None)
+#@app.post("/test/assosiate", response_model=None)
 def test_assosiate_api(payload: List[dict], db: Session = Depends(get_db)):
     return get_recommendations_Assosiate(payload, db)
 
@@ -537,7 +537,7 @@ async def forward_topic(data: TopicInput, db: Session = Depends(get_db)):
 
 
 
-@app.post("/test/")
+#@app.post("/test/")
 def test_endpoint(data: dict):
     print("Received data:", data)
     return {"message": "Data received successfully", "data": data}
