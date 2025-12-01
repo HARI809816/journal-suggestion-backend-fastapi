@@ -301,7 +301,7 @@ def get_assosiate_dataframe(db: Session = Depends(get_db)):
 
 
 
-@app.post("/update_from_excel")
+#@app.post("/update_from_excel")
 async def update_from_excel(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
