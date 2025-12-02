@@ -73,66 +73,65 @@ async def create_upload_file(
     db: Session = Depends(get_db)
 ):
 
-    # Get filename
     filename = file.filename.lower()
 
-    # Choose reader
+    # Read file
     if filename.endswith(".csv"):
-        df = pd.read_csv(
-            file.file,
-            dtype=object,
-            keep_default_na=False
-        )
+        df = pd.read_csv(file.file, dtype=object, keep_default_na=False)
 
     elif filename.endswith(".xlsx") or filename.endswith(".xls"):
-        df = pd.read_excel(
-            file.file,
-            engine="openpyxl",
-            dtype=object,
-            keep_default_na=False,
-            na_values=[]
-        )
+        df = pd.read_excel(file.file, engine="openpyxl", dtype=object, keep_default_na=False)
 
     else:
-        raise HTTPException(
-            status_code=400,
-            detail="Unsupported file type. Please upload CSV or Excel."
-        )
+        raise HTTPException(status_code=400, detail="Upload CSV or Excel only")
 
-    # Clean dataframe
+    # Clean
+    df.columns = [c.strip() for c in df.columns]
     df = clean_dataframe(df)
 
-    # Convert to records
+    # Get DB columns except primary key (id)
+    db_columns = [col.key for col in JournalData.__table__.columns if col.key != "id"]
+
+
+    uploaded_columns = list(df.columns)
+
+    
+    # If DB doesn't have _id but file has → fail
+    if "_id" in uploaded_columns and "_id" not in db_columns:
+        return {
+            "status": "ERROR",
+            "message": "Database missing _id column. Add _id column in model/table."
+        }
+
+    # ---- ONLY SIMPLE MATCH CONDITION ---- #
+    if set(uploaded_columns) != set(db_columns):
+        return {
+        "status": "ERROR",
+        "message": "Column mismatch! File and table columns must match exactly.",
+        "uploaded_columns": uploaded_columns,
+        "expected_columns": db_columns
+        }
+    # -------------------------------------- #
+
+    # Replace NaN with None
+    df = df.where(pd.notnull(df), None)
+
     records = df.to_dict(orient="records")
 
-    # Remove weird NaN/NaT values
-    for record in records:
-        for key, value in record.items():
-            if (
-                pd.isna(value)
-                or (hasattr(value, '__class__') and value.__class__.__name__ in ['NaType', 'NaTType'])
-                or str(value) in ['NaT', 'nan', 'NaN']
-                or (isinstance(value, float) and np.isnan(value))
-            ):
-                record[key] = None
+    # ✔ Delete old data because columns MATCHED
+    db.query(JournalData).delete()
+    db.commit()
 
-    # 🔥 NEW PART — Clear old data if exists
-    existing_count = db.query(JournalData).count()
-
-    if existing_count > 0:
-        db.query(JournalData).delete()
-        db.commit()
-
-    # Insert fresh data
+    # ✔ Insert new data
     db.bulk_insert_mappings(JournalData, records)
     db.commit()
 
     forward_journals(db)
 
     return {
-        "message": f"Old {existing_count} records deleted. New {len(records)} records inserted."
+        "status": "SUCCESS",
+        "message": f"Old data cleared. {len(records)} new records inserted."
     }
-
 
 @app.post("/upload-Assosiate/")
 async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -162,9 +161,31 @@ async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db
             detail="Unsupported file type. Please upload CSV or Excel."
         )
     
-    
+     df.columns = [col.strip().replace(" ", "_") for col in df.columns]
     # Clean the dataframe
      df = clean_dataframe(df)
+
+     db_columns = [col.key for col in AssosiateData.__table__.columns if col.key != "id"]
+
+
+     uploaded_columns = list(df.columns)
+
+    
+    # If DB doesn't have _id but file has → fail
+     if "_id" in uploaded_columns and "_id" not in db_columns:
+        return {
+            "status": "ERROR",
+            "message": "Database missing _id column. Add _id column in model/table."
+        }
+
+    # ---- ONLY SIMPLE MATCH CONDITION ---- #
+     if set(uploaded_columns) != set(db_columns):
+        return {
+        "status": "ERROR",
+        "message": "Column mismatch! File and table columns must match exactly.",
+        "uploaded_columns": uploaded_columns,
+        "expected_columns": db_columns
+        }
     
     # Convert DataFrame to list of dictionaries
      records = df.to_dict(orient="records")
@@ -192,7 +213,7 @@ async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db
     
 
      return {
-        "message": f"Successfully inserted {len(records)} records"
+        "message": f"Old {existing_count} records deleted. New {len(records)} records inserted."
     }
 
 
@@ -307,20 +328,17 @@ async def update_from_excel(
     db: Session = Depends(get_db)
 ):
 
-    # # 1️⃣ Save uploaded excel temporarily
-    # temp_path = "temp_update.xlsx"
-    # with open(temp_path, "wb") as f:
-    #     f.write(await file.read())
+ 
 
     df = pd.read_excel(file.file, engine="openpyxl", dtype=object, keep_default_na=False, na_values=[])
-    # 2️⃣ Read excel
+    #  Read excel
     # df = pd.read_excel(temp_path, dtype=str)
 
     df = clean_dataframe(df)
     
     records = df.to_dict(orient="records")
 
-    # 3️⃣ Loop all rows
+    #  Loop all rows
     for rec in records:
 
         _id = rec.get("_id")   # primary key
@@ -348,19 +366,16 @@ async def update_from_excel(
     db: Session = Depends(get_db)
 ):
 
-    # # 1️⃣ Save uploaded excel temporarily
-    # temp_path = "temp_update.xlsx"
-    # with open(temp_path, "wb") as f:
-    #     f.write(await file.read())
 
-    # 2️⃣ Read excel
+
+    #  Read excel
     df = pd.read_excel(file.file, engine="openpyxl", dtype=object, keep_default_na=False, na_values=[])
 
     df = clean_dataframe(df)
     
     records = df.to_dict(orient="records")
 
-    # 3️⃣ Loop all rows
+    #  Loop all rows
     for rec in records:
 
         _id = rec.get("_id")   # primary key

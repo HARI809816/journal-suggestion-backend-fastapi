@@ -5,7 +5,8 @@ from db import Base
 class JournalData(Base):
     __tablename__ = "journal_data"
 
-    _id = Column(String, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)  # REQUIRED PK
+    _id = Column(String)  
     Journal_Name = Column(String)
     Special_Issue_Name = Column(String)
     Journal_Website = Column(String)
@@ -51,7 +52,8 @@ class JournalData(Base):
 class AssosiateData(Base):
     __tablename__ = "Assosiate_data"
 
-    _id = Column(String, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)  # REQUIRED PK
+    _id = Column(String)
 
     Journal_Name = Column(String)
     Journal_Website = Column(String)
