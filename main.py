@@ -118,6 +118,8 @@ async def create_upload_file(
 
     records = df.to_dict(orient="records")
 
+    existing_count = db.query(AssosiateData).count()
+
     # ✔ Delete old data because columns MATCHED
     db.query(JournalData).delete()
     db.commit()
@@ -130,7 +132,7 @@ async def create_upload_file(
 
     return {
         "status": "SUCCESS",
-        "message": f"Old data cleared. {len(records)} new records inserted."
+        "message": f"Old {existing_count}data cleared. {len(records)} new records inserted."
     }
 
 @app.post("/upload-Assosiate/")
