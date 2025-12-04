@@ -118,7 +118,7 @@ async def create_upload_file(
 
     records = df.to_dict(orient="records")
 
-    existing_count = db.query(AssosiateData).count()
+    existing_count = db.query(JournalData).count()
 
     # ✔ Delete old data because columns MATCHED
     db.query(JournalData).delete()
