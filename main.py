@@ -132,7 +132,7 @@ async def create_upload_file(
 
     return {
         "status": "SUCCESS",
-        "message": f"Old {existing_count}data cleared. {len(records)} new records inserted."
+        "message": f"Old {existing_count} data cleared. {len(records)} new records inserted."
     }
 
 @app.post("/upload-Assosiate/")
