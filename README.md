@@ -11,7 +11,7 @@ Upload `.xlsx` files for:
 - Journal data  
 - Associate data  
 - Clean handling of NaN, NaT, Excel error values  
-- Efficient bulk insert into PostgreSQL  
+- Efficient bulk insert into PostgreSQL. 
 
 ---
 
@@ -139,6 +139,7 @@ Feel free to open issues or PRs — improvements are welcome!
 
 ## ⭐ Show Support
 If you like this project, don’t forget to **star the repository**!
+
 
 
 
