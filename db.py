@@ -7,7 +7,8 @@ import os
 
 #endpoint = 'database-1.cb042k6ospb1.us-east-1.rds.amazonaws.com'
 
-DATABASE_URL=f"postgresql+psycopg2://postgres:HariKumar2003@database-1.cb042k6ospb1.us-east-1.rds.amazonaws.com:5432/FastApi"
+DATABASE_URL=f"postgresql://d2f2d02328d7d4fc47732019c411df7540f5130d6a6c6460b3dcbb230410fdf7:sk_NGSc_R3hKYu7TQcfCyF2D@db.prisma.io:5432/postgres?sslmode=require"
+#DATABASE_URL=f"postgresql+psycopg2://postgres:HariKumar2003@database-1.cb042k6ospb1.us-east-1.rds.amazonaws.com:5432/FastApi"
 
 engine=create_engine(DATABASE_URL)
 
