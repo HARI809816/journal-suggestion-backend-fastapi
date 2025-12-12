@@ -504,6 +504,7 @@ async def forward_topic_assosiate(data: TopicInput, db: Session = Depends(get_db
             #print("Forwarded successfully, response:", response.json())
 
             recommendation = response.json()
+            print(len(recommendation))
             ans = get_recommendations_Assosiate(recommendation,db)
             
 
