@@ -285,7 +285,7 @@ def forward_journals(db: Session = Depends(get_db)):
 
     #  Send DF to external API
     res = requests.post(
-        "http://98.92.100.71/ingest/journals_json",
+        "https://journalapi.vercel.app/ingest/journals_json",
         json=payload,
         timeout=240
     )
@@ -311,7 +311,7 @@ def get_assosiate_dataframe(db: Session = Depends(get_db)):
     payload = {"data": df.to_dict(orient="records")}
 
     res = requests.post(
-        "http://98.92.100.71/ingest/editors_json",
+        "https://journalapi.vercel.app/ingest/editors_json",
         json=payload,
         timeout=240
     )
@@ -491,7 +491,7 @@ async def forward_topic_assosiate(data: TopicInput, db: Session = Depends(get_db
     print(f"Received topic from frontend: {topic}")
     print(f"Top K: {top_k}")
 
-    target_url = "http://98.92.100.71/recommend_editors"
+    target_url = "https://journalapi.vercel.app/recommend_editors"
     async with AsyncClient() as client:
         try:
             response = await client.post(
@@ -528,7 +528,7 @@ async def forward_topic(data: TopicInput, db: Session = Depends(get_db)):
     print(f"Received topic from frontend: {topic}")
     print(f"Top K: {top_k}")
 
-    target_url = "http://98.92.100.71/recommend"  
+    target_url = "https://journalapi.vercel.app/recommend"  
     async with AsyncClient() as client:
         try:
             response = await client.post(
